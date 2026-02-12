@@ -1,0 +1,15 @@
+{
+  "name": "emissaodenotas",
+  "version": "1.0.0",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "json-2-csv": "^5.5.10"
+  }
+}
