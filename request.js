@@ -30,14 +30,15 @@ const lojaIds = {
   },
 };
 
-const today = new Date();
-const finalDateObj = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-const year = finalDateObj.getFullYear();
-const month = String(finalDateObj.getMonth() + 1).padStart(2, "0");
-const finalDay = String(finalDateObj.getDate()).padStart(2, "0");
+let cookie = headers.Cookie;
+
+const currentDate = new Date();
+let year = currentDate.getFullYear();
+let month = String(currentDate.getMonth() + 1).padStart(2, "0");
+const finalDay = String(currentDate.getDate() - 1).padStart(2, "0");
 const startDay = "01";
-const finalDate = `${finalDay}/${month}/${year}`;
-const startDate = `${startDay}/${month}/${year}`;
+let startDate = `${startDay}/${month}/${year}`;
+let finalDate = `${finalDay}/${month}/${year}`;
 
 function stringToNumber(str) {
   return parseFloat(
@@ -49,7 +50,7 @@ function getHeadersForStore(store) {
   const idEstabelecimentoPattern = new RegExp(
     "(?<=TrinksAuth.+idEstabelecimentoPadrao)(.+?)=(.+?)(?=;)",
   );
-  const cookie = headers.Cookie.replace(
+  cookie = cookie.replace(
     idEstabelecimentoPattern,
     `$1=${lojaIds[store].idEstabelecimento}`,
   );
@@ -81,13 +82,15 @@ async function revenueFetch(store) {
     body,
   });
 
+  setCookie(response);
+
   const responseBody = await response.json();
   const table = responseBody.Html;
 
   const totalPattern = /(?<=Total \(R\$\):<\/td>[\s\S]+[^>]>).+?(?=<)/;
   const totalValue = table.match(totalPattern);
 
-  return stringToNumber(totalValue[0]);
+  return totalValue?.length > 0 ? stringToNumber(totalValue[0]) : 0;
 }
 
 async function revenueByTypeFetch(store) {
@@ -113,13 +116,15 @@ async function revenueByTypeFetch(store) {
     body,
   });
 
+  setCookie(response);
+
   const responseBody = await response.json();
   const table = responseBody.Html;
 
   const cashPattern = /(?<=&#192; Vista<\/td>[\s\S]+[^>]>).+?(?=<)/;
   const cashValue = table.match(cashPattern);
 
-  return stringToNumber(cashValue[0]);
+  return cashValue?.length > 0 ? stringToNumber(cashValue[0]) : 0;
 }
 
 async function comissionFetch(store) {
@@ -142,13 +147,17 @@ async function comissionFetch(store) {
     body,
   });
 
+  setCookie(response);
+
   const responseBody = await response.json();
   const table = responseBody.Html;
 
   const valuesPattern = /(?<=<td class="alignRight">).+?(?=<)/g;
   const values = table.match(valuesPattern);
 
-  return stringToNumber(values[0]) + stringToNumber(values[8]);
+  return values?.length > 8
+    ? stringToNumber(values[0]) + stringToNumber(values[8])
+    : 0;
 }
 
 async function productsIncomeFetch(store) {
@@ -177,13 +186,48 @@ async function productsIncomeFetch(store) {
     body,
   });
 
+  setCookie(response);
+
   const responseBody = await response.json();
   const table = responseBody.Html;
 
   const pattern = /(?<=<td class="alignRight">).+?(?=<)/g;
   const values = table.match(pattern);
 
-  return stringToNumber(values[2]);
+  return values?.length > 2 ? stringToNumber(values[2]) : 0;
+}
+
+function setCookie(response) {
+  const setCookie = response.headers.getSetCookie();
+  if (setCookie) {
+    setCookie.map((ck) => {
+      const keyValue = ck.split(";")[0];
+      const [key, value] = keyValue.split("=");
+      const pattern = new RegExp(`(?<=${key})=(.+?)(?=;)`);
+      cookie = cookie.replace(pattern, `=${value}`);
+    });
+  }
+}
+
+function setStartDate(newStartDate) {
+  startDate = newStartDate;
+}
+
+function setFinalDate(newFinalDate) {
+  finalDate = newFinalDate;
+}
+
+function getStartDate() {
+  return startDate;
+}
+
+function getFinalDate() {
+  return finalDate;
+}
+
+function setMonthAndYear(newMonth, newYear) {
+  month = newMonth;
+  year = newYear;
 }
 
 const request = {
@@ -191,6 +235,11 @@ const request = {
   revenueByTypeFetch,
   comissionFetch,
   productsIncomeFetch,
+  setStartDate,
+  getStartDate,
+  setFinalDate,
+  getFinalDate,
+  setMonthAndYear,
 };
 
 export default request;
