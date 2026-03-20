@@ -39,7 +39,10 @@ async function main() {
     await userInput.get();
     await calculateReport();
 
-    const csvFile = json2csv(report, { emptyFieldValue: 0 });
+    const csvFile = json2csv(report, {
+      emptyFieldValue: 0,
+      delimiter: { field: "\t" },
+    });
     fs.writeFileSync("relatorio.csv", csvFile, "utf-8");
   } catch (error) {
     console.error("Não foi possível calcular o relatório");
@@ -51,9 +54,12 @@ async function main() {
 async function calculateReport() {
   for (const unit of report) {
     console.log("Gerando valores para loja %s.", unit.loja);
-    unit.valoresRecebidos = await getRevenue(unit.loja);
-    unit.comissaoMei = await getComission(unit.loja);
-    unit.produtos = await getProductsIncome(unit.loja);
+    const revenue = await getRevenue(unit.loja);
+    unit.valoresRecebidos = priceToCurrencyString(revenue);
+    const comission = await getComission(unit.loja);
+    unit.comissaoMei = priceToCurrencyString(comission);
+    const productsIncome = await getProductsIncome(unit.loja);
+    unit.produtos = priceToCurrencyString(productsIncome);
   }
 }
 
@@ -74,6 +80,13 @@ async function getProductsIncome(store) {
   console.log("Calculando valores dos produtos.\n");
   const income = await request.productsIncomeFetch(store);
   return income;
+}
+
+function priceToCurrencyString(price) {
+  return price.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 }
 
 // const jsonString = JSON.stringify(report, null, 2);
